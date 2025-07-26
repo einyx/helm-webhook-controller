@@ -1,0 +1,31 @@
+[allowlist]
+description = "Gitleaks configuration for helm-registry-webhook"
+paths = [
+    '''\.gitleaks\.toml$''',
+    '''(.*?)(jpg|gif|png|doc|pdf|bin|svg|ico)$''',
+    '''(go.mod|go.sum)$''',
+    '''node_modules''',
+    '''vendor''',
+]
+
+# Allow example/test files
+files = [
+    '''examples/.*\.yaml$''',
+    '''test.*\.yaml$''',
+]
+
+# Allow specific regexes in certain contexts
+regexes = [
+    '''meshxregistry-secret''',  # This is a placeholder secret name
+    '''ACR_AUTH_SECRET''',        # Environment variable name
+]
+
+[[rules]]
+description = "Ignore Kubernetes secret references in YAML"
+path = '''\.yaml$'''
+regex = '''secretRef:\s*name:\s*[\w-]+'''
+tags = ["secret", "yaml"]
+[rules.allowlist]
+regexes = [
+    '''meshxregistry-secret''',
+]

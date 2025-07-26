@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: helm-webhook-system
+
+resources:
+- 00-namespace.yaml
+- 01-configmap.yaml
+- 02-deployment.yaml
+- 03-service.yaml
+- 04-webhook-configuration.yaml
+- 05-rbac.yaml
+
+images:
+- name: ghcr.io/alessio/helm-registry-webhook
+  newTag: latest
+
+configMapGenerator:
+- name: helm-webhook-config
+  behavior: merge
+  literals:
+  - ACR_REGISTRY=meshxregistry.azurecr.io
+  - ACR_AUTH_SECRET=meshxregistry-secret

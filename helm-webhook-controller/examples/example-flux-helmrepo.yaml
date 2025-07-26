@@ -1,0 +1,44 @@
+# Example: Original HelmRepository definition
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: bitnami
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: oci://registry-1.docker.io/bitnamicharts
+  # The webhook will automatically:
+  # 1. Rewrite URL to: oci://meshxregistry.azurecr.io/cached/docker.io/bitnamicharts
+  # 2. Add secretRef pointing to meshxregistry-secret
+---
+# Example: After webhook mutation
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: bitnami-mutated
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: oci://meshxregistry.azurecr.io/cached/docker.io/bitnamicharts
+  secretRef:
+    name: meshxregistry-secret
+---
+# Example: HelmRelease using the repository
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: redis
+  namespace: default
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: redis
+      version: "18.x"
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
+  values:
+    auth:
+      enabled: false

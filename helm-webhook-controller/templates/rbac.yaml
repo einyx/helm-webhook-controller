@@ -1,0 +1,97 @@
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "helm-webhook-controller.serviceAccountName" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+---
+{{- if not .Values.certManager.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["create", "get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+subjects:
+- kind: ServiceAccount
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+  namespace: {{ .Values.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations"]
+  verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade,post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+subjects:
+- kind: ServiceAccount
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+  namespace: {{ .Values.namespace }}
+{{- end }}

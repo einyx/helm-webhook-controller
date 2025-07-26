@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "helm-webhook-controller.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "helm-webhook-controller.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helm-webhook-controller.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["python", "/app/webhook-server.py"]
+        ports:
+        - name: https
+          containerPort: 8443
+          protocol: TCP
+        env:
+        - name: ACR_REGISTRY
+          value: {{ .Values.acr.registry | quote }}
+        - name: ACR_AUTH_SECRET
+          value: {{ .Values.acr.authSecret | quote }}
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - name: webhook-code
+          mountPath: /app
+        - name: webhook-certs
+          mountPath: /certs
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      - name: webhook-code
+        configMap:
+          name: {{ include "helm-webhook-controller.fullname" . }}
+          defaultMode: 0755
+      - name: webhook-certs
+        secret:
+          secretName: {{ include "helm-webhook-controller.fullname" . }}-certs
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

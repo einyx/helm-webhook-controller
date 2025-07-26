@@ -1,0 +1,115 @@
+# Default values for helm-webhook-controller.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
+
+image:
+  repository: python
+  pullPolicy: IfNotPresent
+  tag: "3.11-alpine"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Namespace configuration
+namespace: helm-webhook-controller
+createNamespace: true
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 443
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+livenessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 30
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# ACR Configuration
+acr:
+  registry: "meshxregistry.azurecr.io"
+  authSecret: "meshxregistry-helm-secret"
+  createSecret: false
+  # Docker config json for ACR authentication
+  # Example: {"auths":{"meshxregistry.azurecr.io":{"username":"xxx","password":"xxx","auth":"xxx"}}}
+  dockerConfigJson: ""
+
+# Webhook Configuration
+webhook:
+  failurePolicy: Fail
+  timeoutSeconds: 10
+  # CA bundle will be automatically injected by cert-manager or the cert generation job
+  caBundle: ""
+  # Namespace selector to control which namespaces the webhook applies to
+  # Default excludes system namespaces and the webhook's own namespace
+  namespaceSelector: []
+  # Example:
+  # namespaceSelector:
+  #   - key: environment
+  #     operator: In
+  #     values: ["production", "staging"]
+
+# Certificate Management
+certManager:
+  enabled: false
+  issuer:
+    name: self-signed
+    kind: Issuer
+
+# Certificate Generation Job (used when cert-manager is disabled)
+certGen:
+  image:
+    repository: registry.k8s.io/ingress-nginx/kube-webhook-certgen
+    tag: v20231011-8b53cabe0
+    pullPolicy: IfNotPresent
+
+# Registry Mappings
+# These can be configured but typically don't need to be changed
+registryMappings:
+  "registry-1.docker.io": "docker.io"
+  "docker.io": "docker.io"
+  "ghcr.io": "ghcr.io"
+  "quay.io": "quay.io"
+  "gcr.io": "gcr.io"
+  "registry.k8s.io": "registry.k8s.io"
+  "mcr.microsoft.com": "mcr.microsoft.com"

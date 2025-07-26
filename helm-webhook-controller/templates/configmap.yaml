@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+data:
+  webhook-server.py: |
+{{ .Files.Get "src/webhook-server.py" | indent 4 }}

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helm-webhook-config
+  namespace: helm-webhook-system
+  labels:
+    app.kubernetes.io/name: helm-webhook-controller
+    app.kubernetes.io/part-of: helm-webhook-system
+data:
+  ACR_REGISTRY: "meshxregistry.azurecr.io"
+  ACR_AUTH_SECRET: "meshxregistry-secret"

@@ -1,0 +1,31 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: helm-webhook-controller
+  labels:
+    app.kubernetes.io/name: helm-webhook-controller
+    app.kubernetes.io/part-of: helm-webhook-system
+webhooks:
+- name: helmrepository.helm-webhook.io
+  clientConfig:
+    service:
+      name: helm-webhook-controller
+      namespace: helm-webhook-system
+      path: "/mutate"
+    caBundle: REPLACE_WITH_CA_BUNDLE
+  rules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: ["source.toolkit.fluxcd.io"]
+    apiVersions: ["v1beta2", "v1"]
+    resources: ["helmrepositories"]
+  admissionReviewVersions: ["v1", "v1beta1"]
+  sideEffects: None
+  failurePolicy: Fail
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - kube-system
+      - kube-public
+      - kube-node-lease

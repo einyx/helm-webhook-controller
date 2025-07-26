@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: https
+      protocol: TCP
+      name: https
+  selector:
+    {{- include "helm-webhook-controller.selectorLabels" . | nindent 4 }}

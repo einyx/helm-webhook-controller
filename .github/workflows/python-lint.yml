@@ -1,0 +1,49 @@
+name: Python Lint
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint Python Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort mypy pylint
+          if [ -f helm-webhook-controller/requirements.txt ]; then
+            pip install -r helm-webhook-controller/requirements.txt
+          fi
+
+      - name: Run Black formatter check
+        run: |
+          black --check helm-webhook-controller/src/
+
+      - name: Run isort import checker
+        run: |
+          isort --check-only helm-webhook-controller/src/
+
+      - name: Run Flake8 linter
+        run: |
+          flake8 helm-webhook-controller/src/ --max-line-length=120 --extend-ignore=E203,W503
+
+      - name: Run Pylint
+        run: |
+          pylint helm-webhook-controller/src/ --fail-under=8.0 || true
+
+      - name: Run MyPy type checker
+        run: |
+          mypy helm-webhook-controller/src/ --ignore-missing-imports || true

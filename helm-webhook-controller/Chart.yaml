@@ -1,0 +1,34 @@
+apiVersion: v2
+name: helm-webhook-controller
+description: A Kubernetes webhook that automatically redirects Helm OCI registry references to use Azure Container Registry as a mirror/cache
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://github.com/yourusername/helm-webhook-controller
+sources:
+  - https://github.com/yourusername/helm-webhook-controller
+maintainers:
+  - name: Your Name
+    email: your.email@example.com
+keywords:
+  - helm
+  - oci
+  - webhook
+  - acr
+  - azure
+  - flux
+  - gitops
+  - registry
+  - mirror
+icon: https://helm.sh/img/helm.svg
+annotations:
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial release of helm-webhook-controller
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/license: MIT
+  artifacthub.io/operator: "false"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/recommendations: |
+    - url: https://artifacthub.io/packages/helm/fluxcd-community/flux2
+      reason: Works seamlessly with Flux CD for GitOps workflows

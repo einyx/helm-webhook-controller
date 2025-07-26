@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "alessio"
+
+  # Enable version updates for Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/helm-webhook-controller"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "alessio"
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/helm-webhook-controller"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "alessio"

@@ -1,0 +1,136 @@
+# Example: Installing the helm-webhook-controller using Flux CD
+---
+# First, create the namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: helm-webhook-controller
+---
+# Create the ACR authentication secret
+# Note: Replace with your actual ACR credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: meshxregistry-helm-secret
+  namespace: helm-webhook-controller
+type: kubernetes.io/dockerconfigjson
+stringData:
+  .dockerconfigjson: |
+    {
+      "auths": {
+        "meshxregistry.azurecr.io": {
+          "username": "your-acr-username",
+          "password": "your-acr-password",
+          "auth": "base64-encoded-username:password"
+        }
+      }
+    }
+---
+# HelmRepository pointing to the chart location
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: helm-webhook-controller
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: https://your-helm-repo-url
+  # Or if using OCI:
+  # type: oci
+  # url: oci://your-registry/helm-webhook-controller
+---
+# HelmRelease to install the webhook
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: helm-webhook-controller
+  namespace: flux-system
+spec:
+  targetNamespace: helm-webhook-controller
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  interval: 10m
+  chart:
+    spec:
+      chart: helm-webhook-controller
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: helm-webhook-controller
+  values:
+    # Number of webhook replicas for high availability
+    replicaCount: 2
+    
+    # ACR configuration
+    acr:
+      registry: "meshxregistry.azurecr.io"
+      authSecret: "meshxregistry-helm-secret"
+      createSecret: false  # We're creating it manually above
+    
+    # Resource limits and requests
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    
+    # Webhook configuration
+    webhook:
+      failurePolicy: Fail  # Can be "Fail" or "Ignore"
+      timeoutSeconds: 10
+      # Control which namespaces the webhook applies to
+      namespaceSelector:
+        - key: "webhook.helm/enabled"
+          operator: In
+          values: ["true"]
+    
+    # Use cert-manager if available
+    certManager:
+      enabled: false  # Set to true if cert-manager is installed
+      issuer:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+---
+# Example: HelmRepository that will be mutated by the webhook
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: bitnami
+  namespace: flux-system
+  labels:
+    webhook.helm/enabled: "true"  # This namespace is selected by the webhook
+spec:
+  interval: 10m
+  url: oci://registry-1.docker.io/bitnamicharts
+  # After mutation by webhook, this will become:
+  # url: oci://meshxregistry.azurecr.io/cached/docker.io/bitnamicharts
+  # And secretRef will be added automatically
+---
+# Example: HelmRelease using the mutated repository
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: redis
+  namespace: default
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: redis
+      version: "18.x"
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
+  values:
+    auth:
+      enabled: false
+    replica:
+      replicaCount: 1

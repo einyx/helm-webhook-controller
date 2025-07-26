@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helm-webhook-controller
+  namespace: helm-webhook-system
+  labels:
+    app.kubernetes.io/name: helm-webhook-controller
+    app.kubernetes.io/part-of: helm-webhook-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: helm-webhook-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: helm-webhook-controller
+        app.kubernetes.io/part-of: helm-webhook-system
+    spec:
+      serviceAccountName: helm-webhook-controller
+      containers:
+      - name: webhook
+        image: ghcr.io/alessio/helm-registry-webhook:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8443
+          name: webhook
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: helm-webhook-config
+        volumeMounts:
+        - name: webhook-tls
+          mountPath: /certs
+          readOnly: true
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: webhook-tls
+        secret:
+          secretName: helm-webhook-tls
+          items:
+          - key: tls.crt
+            path: cert
+          - key: tls.key
+            path: key

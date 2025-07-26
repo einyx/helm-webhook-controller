@@ -1,0 +1,81 @@
+{{- if .Values.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "helm-webhook-controller.fullname" . }}-certs
+  dnsNames:
+  - {{ include "helm-webhook-controller.fullname" . }}.{{ .Values.namespace }}.svc
+  - {{ include "helm-webhook-controller.fullname" . }}.{{ .Values.namespace }}.svc.cluster.local
+  issuerRef:
+    name: {{ .Values.certManager.issuer.name }}
+    kind: {{ .Values.certManager.issuer.kind }}
+{{- else }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+      labels:
+        {{- include "helm-webhook-controller.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+      containers:
+      - name: cert-gen
+        image: {{ .Values.certGen.image.repository }}:{{ .Values.certGen.image.tag }}
+        imagePullPolicy: {{ .Values.certGen.image.pullPolicy }}
+        args:
+          - create
+          - --host={{ include "helm-webhook-controller.fullname" . }},{{ include "helm-webhook-controller.fullname" . }}.{{ .Values.namespace }}.svc,{{ include "helm-webhook-controller.fullname" . }}.{{ .Values.namespace }}.svc.cluster.local
+          - --namespace={{ .Values.namespace }}
+          - --secret-name={{ include "helm-webhook-controller.fullname" . }}-certs
+          - --cert-name=cert
+          - --key-name=key
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "helm-webhook-controller.fullname" . }}-cert-patch
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "helm-webhook-controller.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ include "helm-webhook-controller.fullname" . }}-cert-patch
+      labels:
+        {{- include "helm-webhook-controller.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "helm-webhook-controller.fullname" . }}-cert-gen
+      containers:
+      - name: cert-patch
+        image: {{ .Values.certGen.image.repository }}:{{ .Values.certGen.image.tag }}
+        imagePullPolicy: {{ .Values.certGen.image.pullPolicy }}
+        args:
+          - patch
+          - --webhook-name={{ include "helm-webhook-controller.fullname" . }}
+          - --namespace={{ .Values.namespace }}
+          - --patch-validating=false
+          - --secret-name={{ include "helm-webhook-controller.fullname" . }}-certs
+          - --patch-failure-policy={{ .Values.webhook.failurePolicy }}
+{{- end }}

@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: helm-webhook-controller
+  namespace: helm-webhook-system
+  labels:
+    app.kubernetes.io/name: helm-webhook-controller
+    app.kubernetes.io/part-of: helm-webhook-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: helm-webhook-controller
+  labels:
+    app.kubernetes.io/name: helm-webhook-controller
+    app.kubernetes.io/part-of: helm-webhook-system
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["source.toolkit.fluxcd.io"]
+  resources: ["helmrepositories"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: helm-webhook-controller
+  labels:
+    app.kubernetes.io/name: helm-webhook-controller
+    app.kubernetes.io/part-of: helm-webhook-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: helm-webhook-controller
+subjects:
+- kind: ServiceAccount
+  name: helm-webhook-controller
+  namespace: helm-webhook-system
