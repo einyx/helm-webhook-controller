@@ -7,7 +7,7 @@ replicaCount: 2
 image:
   repository: python
   pullPolicy: IfNotPresent
-  tag: "3.11-alpine"
+  tag: "3.13-alpine"
 
 imagePullSecrets: []
 nameOverride: ""
